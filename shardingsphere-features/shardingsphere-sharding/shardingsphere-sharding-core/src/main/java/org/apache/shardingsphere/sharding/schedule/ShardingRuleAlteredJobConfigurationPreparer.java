@@ -49,6 +49,7 @@ import org.apache.shardingsphere.sharding.rule.TableRule;
 import org.apache.shardingsphere.sharding.yaml.swapper.ShardingRuleConfigurationConverter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -80,9 +81,17 @@ public final class ShardingRuleAlteredJobConfigurationPreparer implements RuleAl
         ShardingSpherePipelineDataSourceConfiguration source = (ShardingSpherePipelineDataSourceConfiguration) sourceDataSourceConfig;
         ShardingRuleConfiguration sourceRuleConfig = ShardingRuleConfigurationConverter.findAndConvertShardingRuleConfiguration(source.getRootConfig().getRules());
         ShardingRule shardingRule = new ShardingRule(sourceRuleConfig, source.getRootConfig().getDataSources().keySet());
+        Collection<String> broadcastTables = shardingRule.getBroadcastTables();
+        Map<String, TableRule> broadcastTableRules = Maps.newHashMap();
+        for (String each : broadcastTables) {
+            broadcastTableRules.put(each.toLowerCase(), new TableRule(shardingRule.getDataSourceNames(), each));
+        }
         Map<String, TableRule> tableRules = shardingRule.getTableRules();
         Map<String, List<DataNode>> result = new LinkedHashMap<>();
         for (Entry<String, TableRule> entry : tableRules.entrySet()) {
+            result.put(entry.getKey(), entry.getValue().getActualDataNodes());
+        }
+        for (Entry<String, TableRule> entry : broadcastTableRules.entrySet()) {
             result.put(entry.getKey(), entry.getValue().getActualDataNodes());
         }
         return result;
